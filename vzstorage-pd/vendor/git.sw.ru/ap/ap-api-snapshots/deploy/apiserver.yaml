@@ -1,0 +1,163 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: virtuozzo
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: ap-api-snapshots
+  namespace: virtuozzo
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: ap-api-snapshots-auth-reader
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: ap-api-snapshots
+  namespace: virtuozzo
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: ap-api-apps:system:auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: ap-api-snapshots
+  namespace: virtuozzo
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: ap-api-snapshots:controller
+rules:
+- apiGroups: [""]
+  resources: ["secrets", "nodes", "services", "persistentvolumeclaims", "persistentvolumes", "pods/log"]
+  verbs: ["get", "list","watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list","watch","create", "delete"]
+- apiGroups: ["snapshots.ap.virtuozzo.com"]
+  resources: ["snapshots", "snapshots/status"]
+  verbs: ["get", "list", "watch", "update", "delete", "create"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: ap-api-snapshots:controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ap-api-snapshots:controller
+subjects:
+- kind: ServiceAccount
+  name: ap-api-snapshots
+  namespace: virtuozzo
+---
+apiVersion: apiregistration.k8s.io/v1beta1
+kind: APIService
+metadata:
+  name: v1.snapshots.ap.virtuozzo.com
+  labels:
+    api: ap-api-snapshots
+    apiserver: "true"
+spec:
+  version: v1
+  group: snapshots.ap.virtuozzo.com
+  groupPriorityMinimum: 2000
+  priority: 200
+  service:
+    name: ap-api-snapshots
+    namespace: virtuozzo
+  versionPriority: 10
+  caBundle: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lKQUwyWlhVRzFoU3JJTUEwR0NTcUdTSWIzRFFFQkN3VUFNREV4THpBdEJnTlYKQkFNTUptRndMV0Z3YVMxemJtRndjMmh2ZEhNdFkyVnlkR2xtYVdOaGRHVXRZWFYwYUc5eWFYUjVNQjRYRFRFMwpNRGN5TlRFeU1UWXlOVm9YRFRFNE1EY3lOVEV5TVRZeU5Wb3dNVEV2TUMwR0ExVUVBd3dtWVhBdFlYQnBMWE51CllYQnphRzkwY3kxalpYSjBhV1pwWTJGMFpTMWhkWFJvYjNKcGRIa3dnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRQzdrZlh4b2VHbTVIQzdhUTU4RVhJeXMzblhjOHd3U3ZWazBreFM0cmJwTjRYegpOWCtDeHZVQzVVeWthSUpVZEVIc3RFMGVWNlZlZ3ZWVmwvWS9BRjM4aGdwRVRBVFkvUjc1T1B4YlFEWjByUWZkCkZxdkZoQVRtenNtbXQ4N3RCQXVBOGJqV254YllaR1hWS1FlVXlzYlpYRTAzMmsza0dwRWo5azlSZFVJVXg2QzcKS3hVbFhpQXdDU0VPOGJEcTRPOEVJd0hkb1BQa1YrM0J2NnkvbmZDdHdVaEJXL2dzaW82S3Z0cGJHaFQ3TE5lbApRM1p3eGNhQW9OcWVJSTdBZnp3ZHVSdTRCaXhmTGpWZG5sY0hBMWU2UWtaT0MvZUYva0t5VTZYOXhHdGJFUVViCm13NENKTlE0R2Q1Unh3QzZ0REJ1a2pyeFl4NEo4Qlkveklwb2RYWkxBZ01CQUFHalVEQk9NQjBHQTFVZERnUVcKQkJTODNqUzFicWNpcEFxUXpCSklKdWpPTVI5cFN6QWZCZ05WSFNNRUdEQVdnQlM4M2pTMWJxY2lwQXFRekJKSQpKdWpPTVI5cFN6QU1CZ05WSFJNRUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFDaFV4a2F4NnlDClFVbVRLNVdnenZ3MTFsREVQbUNBZFJsbENmeFpIZSsvd25XYm9LMThJRE54S0JHdDVGTkhsNVVFOWhFYkd5ZncKUXBTdVRMQ3VxZGZXZGd5bUhudnN4bHkxZVZBTVluS2hBVVpWb0NzYVp5Sks0YXZzUFJWMHRMQmZYb2RDZTIxWQplME9xS1ZXZG9JUFFiN1FJZEIwR3UrbFp3NVQxMFk0bU1kNGNWenJybHFORUxZV1liVExVUExIbGNlVk1SaDhiCmdCK0FyTjBKRDVjTjB3NEhQYmxJK3RYcVJJYmpwbnozTDczcW1ralZQdmhuQXhLUWJMOTFCR3FjT1FuN01UL1EKbG1VVE1jTzhOSE16ZGJ1WjZqbDJobWVJUzVIM2VTM05UbDBVelcvMCs4Vmx6UUI2Yk5mRkRRV1VrRy80K0VCRgpvUDhUcGJLV0swNk8KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ap-api-snapshots
+  namespace: virtuozzo
+  labels:
+    api: ap-api-snapshots
+    apiserver: "true"
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    api: ap-api-snapshots
+    apiserver: "true"
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: ap-api-snapshots
+  namespace: virtuozzo
+  labels:
+    api: ap-api-snapshots
+    apiserver: "true"
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        api: ap-api-snapshots
+        apiserver: "true"
+    spec:
+      hostNetwork: true
+      serviceAccountName: "ap-api-snapshots"
+      containers:
+      - name: apiserver
+        image: 10.28.29.130:5000/ap-api-snapshots:latest
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: apiserver-certs
+          mountPath: /apiserver.local.config/certificates
+          readOnly: true
+        command:
+        - "./apiserver"
+        args:
+        - "--etcd-servers=http://localhost:2379"
+        - "--tls-cert-file=/apiserver.local.config/certificates/tls.crt"
+        - "--tls-private-key-file=/apiserver.local.config/certificates/tls.key"
+        - "--audit-log-path=-"
+        - "--audit-log-maxage=0"
+        - "--audit-log-maxbackup=0"
+      - name: controller
+        image: 10.28.29.130:5000/ap-api-snapshots:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - "./controller-manager"
+        args:
+      volumes:
+      - name: apiserver-certs
+        secret:
+          secretName: ap-api-snapshots
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/tls
+metadata:
+  name: ap-api-snapshots
+  namespace: virtuozzo
+  labels:
+    api: ap-api-snapshots
+    apiserver: "true"
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMxakNDQWI0Q0NRRG8zd09pelEraFh6QU5CZ2txaGtpRzl3MEJBUVVGQURBeE1TOHdMUVlEVlFRRERDWmgKY0MxaGNHa3RjMjVoY0hOb2IzUnpMV05sY25ScFptbGpZWFJsTFdGMWRHaHZjbWwwZVRBZUZ3MHhOekEzTWpVeApNakUyTWpWYUZ3MHhPREEzTWpVeE1qRTJNalZhTUNreEp6QWxCZ05WQkFNTUhtRndMV0Z3YVMxemJtRndjMmh2CmRITXVkbWx5ZEhWdmVucHZMbk4yWXpDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUIKQUtXK2FzMnBCTyttVFRRbGFMTGl6blVWUmp5eGdvREVaVmRkV3h0TGFBV3J3b2pEZ2Y0OE9BemN2TFlaaTkxQgp3V29oVHVXUk5rdTNlcEtOK3U2U2pWYjg5WnQzRDE3dW1UTjlXVDVvcFNGN0REdlNhWmZra3Q4bm54WmsrUmlnCnNBN1BqS2pNckFIT1UxcnhxREp3YTBWSDBGeEk5akZ5clpnOW1OTEpnS2pnWjNkb0lYdy9Dc3NaeHZZUS8wb0kKVGhNRXlnQS9EbVd2Vlpwa2tpbmdEMGlMNkc5MktaM0kwVXo4QXllMWtER0IrVk5YZ0FOMnJEV253bHE5QXoyZwpuNlRSdmRXdkRaSEFyZ1k2d1JVNm5OWW1WempVS2xJMDNJUGpQVGNaQ0xKb1hEZUFmTGVqUE5XaU54a094UnJzCndPSitXdEJyVVRudVphanQyb0RhUm9FQ0F3RUFBVEFOQmdrcWhraUc5dzBCQVFVRkFBT0NBUUVBT0F5Qjdmd0oKOGVWV2tMZ0lzU21tdktJaVhmN3pibDVOazFVZzRnL08wdlFYcmphajNxcENVVHlENkxRWHdFUk5rVjg5Z01FSgozbFl4UkxFTHFhV1psSDBObDJVaGsrek15eFRzdEp6dEdvTWFlellaeS9nN2YweTkrOEFpaXVGME1DTTZrQVhsCjFUcW9EWitmT05XbXpJNndVU1FGNnAzSFZkL0lOOEE5eWdxb3VjSjEvUkpiSTVDd051Nisxc3JLcjNGZmZuNEkKdG85NGdUZEpYUXJkcllHZGxHZ05WeEQwb3dzL2JsYWg0b3BtaU9xcUJuZ3RVM2tGVGxWZUpwZm1kaW8zWkczVwp4bU1pNDZTd2lNRWIxTEpyWGlZSE5mcVFoQjBlODdvOFhMTEU4d01JWVFvS0w0aTdhamZuRjZLRDF3ZUlQaDBxCnJGR0pSR1NnLzRvT1VRPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ2x2bXJOcVFUdnBrMDAKSldpeTRzNTFGVVk4c1lLQXhHVlhYVnNiUzJnRnE4S0l3NEgrUERnTTNMeTJHWXZkUWNGcUlVN2xrVFpMdDNxUwpqZnJ1a28xVy9QV2JkdzllN3BremZWaythS1VoZXd3NzBtbVg1SkxmSjU4V1pQa1lvTEFPejR5b3pLd0J6bE5hCjhhZ3ljR3RGUjlCY1NQWXhjcTJZUFpqU3lZQ280R2QzYUNGOFB3ckxHY2IyRVA5S0NFNFRCTW9BUHc1bHIxV2EKWkpJcDRBOUlpK2h2ZGltZHlORk0vQU1udFpBeGdmbFRWNEFEZHF3MXA4SmF2UU05b0orazBiM1ZydzJSd0s0RwpPc0VWT3B6V0psYzQxQ3BTTk55RDR6MDNHUWl5YUZ3M2dIeTNvenpWb2pjWkRzVWE3TURpZmxyUWExRTU3bVdvCjdkcUEya2FCQWdNQkFBRUNnZ0VBZGZ4b1VVRFpoN1BOejZvMXJ1b3Y2RDhkd2NUblRyMEFHMElVd2doYTQzYVMKeEFMUS9lZG1TeG16cUxua3k3dXNjTjJIS1hyR3VQM0MzcUw5bDJseC9oT1N6M25nMGtadGZxN2pvYjZpbG9QZQpnSk5Yb2M0UUU1VkQ5WkFwbHJPRXdQWlVmakU4M1FoQVpFUVU1TnNNTWNSZWVlTmlobTdKVHMvQ2c0TDMrTDZvCnh2NkFFMzJCWXVFSHY4U1gweGQwbWUrNTA5djVqRW9QVWk4aXc1UFVlUXdVWE5kdExJeTZ4YnFSOVZ0UTdkZzAKVGU4QWpHeWlLN1Zmc2JUVWJmWUtobFNhampnekFTNmdrdkZoZDd5QlQ4NE1RK21naEhFdlg5Vmp5d3dFcWl2UQpPc3pzNjVKUURZNGpsZVlzMklmL1hZSFNvVE9VTE80SFY1NzZjcGVOOFFLQmdRRFdiMUdDSW8xQkJ2bGVpMm9YCmsrWjBUNXFlaGpoYVBOSkxxSFkzUk1aVmZMeDZCMXFCM2hWKzVmWlFOUUtwN3pmajYyMzVOUWRGWmxub25zdnQKUmY5cEtKTTBLRzZRaXExR094d2RncWwwYytMQlR6ZUlwd01uTmpqZmtQa2RkaVphczEvUUc2LzdRVTR1cFZTOQpDcWZkekF3MVAwRVV4amhyU1ViM1QrTlBWUUtCZ1FERjN2UXgwdEFjbkpEekN6MzJXOTAvOVFIaERJVzBuK1dFCjFuYnJGanNQbTRlZ255QUVnYk1qbDlNYUpnUEdoOFpNbmxzUlRkVlRTTFZGK2dMdUNZYmNMRWJmcUpneVRnQmYKQ3lQNGFyWjNQWTFHUWtFdTFjNExBbjczK05IVWxTcVJQMlhveVRFZ3Rna3JNU3dhZEFOVE9yTVlDOUVDbmtxVgppOGpnSklaaWZRS0JnUUNpSy9ZYzBUeTYzU2RqRlZUYkdBUEdHeDM0bmRHb2pTOE9BUTNHcHNESWpsbU1nRnMyCnRGclZhZDFxczJ5Y1VFcVltTWpISEErdnNNUjJaUUlkSkQ4UnJKb0hiRHlTSEE4SGVsUzlETUJUVGdGRDZVRTYKbS9TS2h6dGorU1F0MzlrSjUzYWkwUTI2bTUwaE1mQndOOHJVdHlqVWJFNHdBK2xQV2svTllpR3JNUUtCZ0FHVgpBc2JUTks3RjRiTFB5RE1NRVB6TjdMSHI4N1c2QVkvS1Z6RVNBRzdqZzNZWlQ1dzVuVUVQbWJSLzBVL3BEZ0RXCjAwdVVIN3lHdkV4TzcyOFB6SEErT21MWGFrQWN0NHdLL3NLaHQ4dkVSampsbHJmVkpjeVl2SU1uRGladyt1SW0KYTU0czNhT3hVT2x6ZnpMRzhxL2JyRXJvN1Via0ZSeVUvWW90UUpYUkFvR0FMMkhHR0M3cVV2TCtzbm9JT2xXZgpWT3FlbmFJNFRtcnJPSmdQbGppNmRsTkUvSERkMVBhQ05oYS9GM1ZqUzI2bG16ejVOYjhnbll1ZXRrT3pUTllwCmRBbytaNFNGM3lGVTI5b3JuemVJallXbDllcmV0Tkt1RUxsQkx5TjVEeWkyWjMwbGdFRmxWSXBiVzQxLzBuSnEKY1JRKzNhMytVQXNIUGIveXIxb0MwN1k9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+---

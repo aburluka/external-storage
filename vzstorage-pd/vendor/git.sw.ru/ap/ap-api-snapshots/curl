@@ -1,0 +1,5 @@
+curl -k https://localhost:9443/apis/snapshots.ap.virtuozzo.com/v1/snapshots
+curl -k https://localhost:9443/apis/snapshots.ap.virtuozzo.com/v1/namespaces/default/snapshots -XPOST -H'Content-Type: application/json' -d@snap.json
+curl -k https://localhost:9443/apis/snapshots.ap.virtuozzo.com/v1/namespaces/default/snapshots/nginx -XDELETE
+
+curl -k -XDELETE -d '{"apiVersion":"v1","kind":"DeleteOptions","gracePeriodSeconds": 0}' https://localhost:9443/apis/snapshots.ap.virtuozzo.com/v1/namespaces/default/snapshots/nginx2 -H "Content-Type: application/json"

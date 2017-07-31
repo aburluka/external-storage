@@ -61,7 +61,7 @@ spec:
     flexVolume:
       driver: "virtuozzo/ploop" # this must match your vendor dir
       options:
-        volumeId: "golang-ploop-test"
+        volumeID: "golang-ploop-test"
         size: "10G"
         volumePath: "/vstorage/storage_pool/kubernetes"
 ```
@@ -79,7 +79,7 @@ ploop18115  /vstorage/storage_pool/kubernetes/golang-ploop-test/golang-ploop-tes
 * **volumePath**
 
   a path to a virtuozzo storage directory where ploop image is located
-* **volumeId**
+* **volumeID**
 
    an unique name for a ploop image
 * **size**=[0-9]*[KMG]
@@ -131,6 +131,9 @@ ploop18115  /vstorage/storage_pool/kubernetes/golang-ploop-test/golang-ploop-tes
      Storage tier for file replicas.
 
 ### Logging
+
+**NOTE:** high verbosity logging level may include some secret data, so it's strongly
+recomended to avoid using verbosity level >= 4 for production systems
 
 By default, ploop-flexvol redirects all logging data to the systemd-journald
 service. If you want to use another way to collect logging data, you can create

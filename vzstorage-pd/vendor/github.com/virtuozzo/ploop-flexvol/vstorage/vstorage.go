@@ -95,3 +95,12 @@ func (v *Vstorage) Mount(where string) error {
 	}
 	return nil
 }
+
+func (v *Vstorage) Revoke(path string) error {
+	mount := exec.Command("vstorage", "-c", v.Name, "revoke", "-R", path)
+	_, err := mount.Output()
+	if err != nil {
+		return fmt.Errorf("Unable to revoke %s path %s: %v", v.Name, path, err)
+	}
+	return nil
+}

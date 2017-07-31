@@ -1,0 +1,39 @@
+#!/bin/sh
+
+cmd=$1
+shift
+
+set -e -x
+cluster=`cat /etc/vstorage-auth/clusterName`
+
+cluster_path="$(readlink -f /var/run)/ploop-flexvol/$cluster"
+mkdir -p $cluster_path
+
+vmount=0
+
+cat /proc/self/mountinfo | grep "$cluster_path.*fuse.*vstorage" || {
+	cat /etc/vstorage-auth/clusterPassword | vstorage -c $cluster auth-node -P
+	vstorage-mount -c $cluster $cluster_path
+	vmount=1
+}
+
+ls -l $cluster_path
+
+if [ "$cmd" == "create" ]; then
+	image_path=$1
+	shift
+	snap_path=$1
+	shift
+	ploop-volume snapshot $cluster_path/$image_path $cluster_path/$snap_path
+elif [ "$cmd" == "delete" ]; then
+	snap_path=$1
+	shift
+	ploop-volume delete $cluster_path/$snap_path
+else
+	echo "Unknown command: $cmd"
+	exit 1
+fi
+
+if [ "$vmount" -eq 1 ]; then
+	umount $cluster_path
+fi

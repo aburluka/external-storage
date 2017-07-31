@@ -1,0 +1,11 @@
+{
+    "kind": "Snapshot",
+    "metadata":{
+        "name": "nginx2",
+        "namespace": "default"
+    },
+    "spec": {
+	"persistentVolumeClaim" : "vz-test-claim"
+    }
+}
+

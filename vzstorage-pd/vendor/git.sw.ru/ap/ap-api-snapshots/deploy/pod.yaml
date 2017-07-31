@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vzsnap
+spec:
+  hostNetwork: true
+  containers:
+  - name: vzsnap
+    image: docker.io/avagin/vzsnap-k8s-job
+    command: ["vzsnap-cmd"]
+    volumeMounts: [{
+      name: "auth",
+      mountPath: "/etc/vstorage-auth",
+      readOnly: true
+    }]
+    securityContext:
+      privileged: true
+  volumes: [{
+    name: "auth",
+    secret: {
+      secretName: "ploop"
+    }
+  }]
+  restartPolicy: Never
+  nodeSelector:
+    kubernetes.io/hostname: NODE
