@@ -37,11 +37,15 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/virtuozzo/goploop-cli"
 	"github.com/virtuozzo/ploop-flexvol/vstorage"
+
+	"git.sw.ru/ap/ap-api-snapshots/pkg/apis/snapshots/v1"
+	"git.sw.ru/ap/ap-api-snapshots/pkg/client/clientset_generated/clientset"
 )
 
 const (
 	parentProvisionerAnn = "vzFSParentProvisioner"
 	vzShareAnn           = "vzShare"
+	snapshotMark         = "virtuozzo.io/snapshot-id"
 )
 
 type vzFSProvisioner struct {
@@ -169,6 +173,23 @@ func createPloop(mount string, options map[string]string) error {
 	return nil
 }
 
+func (p *vzFSProvisioner) restoreSnapshot(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
+	_ /*snapshotId*/, present := options.PVC.Annotations[snapshotMark]
+	if !present /* || find(snapshotId) */ {
+		return nil, fmt.Errorf("Please specify correct snapshot ID")
+	}
+
+	pv, err := p.client.Core().PersistentVolumes().Get("somename", metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	fvOptions := pv.Spec.PersistentVolumeSource.FlexVolume.Options
+	path := fvOptions["volumePath"] + fvOptions["volumeID"]
+
+	return nil, fmt.Errorf("currently snapshot restoring is not supported %s", path)
+}
+
 // Provision creates a storage asset and returns a PV object representing it.
 func (p *vzFSProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
 	modes := options.PVC.Spec.AccessModes
@@ -185,6 +206,10 @@ func (p *vzFSProvisioner) Provision(options controller.VolumeOptions) (*v1.Persi
 
 	if options.PVC.Spec.Selector != nil {
 		return nil, fmt.Errorf("claim Selector is not supported")
+	}
+
+	if _, ok := options.PVC.Annotations[snapshotMark]; ok {
+		return p.restoreSnapshot(options)
 	}
 	share := fmt.Sprintf("kubernetes-dynamic-pvc-%s", options.PVC.UID)
 
